@@ -1,30 +1,6 @@
 use bevy::prelude::*;
 use std::collections::BTreeMap;
-
-pub type PlayerId = u32;
-
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct RoomId(pub u32);
-
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Position {
-    pub x: i32,
-    pub y: i32,
-    pub room: RoomId,
-}
-
-#[derive(Component, Debug, Clone)]
-pub struct Drone {
-    pub owner: PlayerId,
-    pub age: u32,
-}
-
-#[derive(Component, Debug, Clone)]
-pub struct Structure {
-    pub owner: Option<PlayerId>,
-    pub hits: u32,
-    pub hits_max: u32,
-}
+use swarm_engine::components::{Drone, PlayerId, Position, Structure};
 
 #[derive(Component, Debug, Clone)]
 pub struct ForwardDepot {
@@ -75,8 +51,10 @@ pub struct DepotStorageModPlugin;
 
 impl Plugin for DepotStorageModPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<DepotStorageConfig>()
-            .add_systems(Update, (initialize_forward_depots, depot_repair_system).chain());
+        app.init_resource::<DepotStorageConfig>().add_systems(
+            Update,
+            (initialize_forward_depots, depot_repair_system).chain(),
+        );
     }
 }
 
@@ -105,14 +83,22 @@ pub fn depot_repair_system(
         .map(|(entity, drone, position)| (entity, drone, *position))
         .collect();
     drone_rows.sort_by_key(|(entity, drone, position)| {
-        (position.room, position.x, position.y, drone.owner, entity.to_bits())
+        (
+            position.room,
+            position.x,
+            position.y,
+            drone.owner,
+            entity.to_bits(),
+        )
     });
 
     let mut depot_rows: Vec<_> = depots
         .iter_mut()
         .map(|(entity, depot, position)| (entity, depot, *position))
         .collect();
-    depot_rows.sort_by_key(|(entity, _, position)| (position.room, position.x, position.y, entity.to_bits()));
+    depot_rows.sort_by_key(|(entity, _, position)| {
+        (position.room, position.x, position.y, entity.to_bits())
+    });
 
     let mut used_by_depot: BTreeMap<Entity, u32> = BTreeMap::new();
     for (_, mut drone, drone_pos) in drone_rows {
@@ -136,7 +122,8 @@ pub fn depot_repair_system(
                 break;
             }
             let repair_cost = depot.repair_cost_energy;
-            depot.storage
+            depot
+                .storage
                 .insert("Energy".to_string(), available - repair_cost);
             drone.age = drone.age.saturating_sub(repaired);
             used_by_depot.insert(*depot_entity, used + 1);
