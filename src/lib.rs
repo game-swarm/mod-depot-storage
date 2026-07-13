@@ -135,3 +135,40 @@ pub fn depot_repair_system(
 fn distance(a: &Position, b: &Position) -> Option<u32> {
     (a.room == b.room).then(|| a.x.abs_diff(b.x).max(a.y.abs_diff(b.y)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use swarm_engine::components::RoomId;
+
+    #[test]
+    fn default_depot_matches_configured_capacity() {
+        let depot = ForwardDepot::default();
+
+        assert_eq!(depot.capacity, 10_000);
+        assert_eq!(depot.repair_capacity, 5);
+        assert_eq!(depot.repair_cost_energy, 1);
+    }
+
+    #[test]
+    fn distance_is_room_scoped_chebyshev_range() {
+        let a = Position {
+            x: 2,
+            y: 4,
+            room: RoomId(7),
+        };
+        let b = Position {
+            x: 5,
+            y: 5,
+            room: RoomId(7),
+        };
+        let c = Position {
+            x: 5,
+            y: 5,
+            room: RoomId(8),
+        };
+
+        assert_eq!(distance(&a, &b), Some(3));
+        assert_eq!(distance(&a, &c), None);
+    }
+}
