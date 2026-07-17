@@ -17,6 +17,8 @@
 
 ## 配置
 
+以下配置由 Engine 的 strict mod control plane 按 `mod.toml` 类型定义解码并注入 `DepotStorageConfig`。有效值来自 `mods.lock`；未知字段、错误类型和非法范围会阻止启动。
+
 mod.toml:
 ```toml
 [config]

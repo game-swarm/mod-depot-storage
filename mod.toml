@@ -5,12 +5,12 @@ description = "Depot and global storage system — resource storage, cargo trans
 author = "Swarm Team"
 
 [dependencies]
-empire-upkeep = ">=0.1.0"
 
 [config]
-storage_cap_energy = { type = "int", default = 10000, description = "Maximum energy storage per depot" }
-storage_cap_mineral = { type = "int", default = 5000, description = "Maximum mineral storage per depot" }
-transfer_rate = { type = "int", default = 100, description = "Cargo transfer rate per tick" }
+depot_capacity = { type = "u32", default = 10000, description = "Maximum storage per depot" }
+depot_hits = { type = "u32", default = 5000, description = "Minimum hit points for depot structures" }
+repair_range = { type = "u32", default = 1, description = "Depot repair range in tiles" }
+repair_capacity = { type = "u32", default = 5, description = "Depot repair capacity per tick" }
 
 [compatibility]
 engine_abi_min = "1.0"
