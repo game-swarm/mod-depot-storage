@@ -1,6 +1,11 @@
 use bevy::prelude::*;
 use std::collections::BTreeMap;
-use swarm_engine::components::{Drone, PlayerId, Position, Structure};
+use swarm_engine_api::prelude::{
+    API_VERSION, ConfigFieldDescriptor, ConfigValidator, ConfigValueType,
+    DESCRIPTOR_SCHEMA_VERSION, PlayerId, PluginDescriptor, SystemDescriptor, TickPhase,
+};
+use swarm_engine_plugin_sdk::prelude::{Drone, Position, Structure};
+use swarm_engine_plugin_sdk::traits::SwarmPlugin;
 
 #[derive(Component, Debug, Clone)]
 pub struct ForwardDepot {
@@ -55,6 +60,58 @@ impl Plugin for DepotStorageModPlugin {
             Update,
             (initialize_forward_depots, depot_repair_system).chain(),
         );
+    }
+}
+
+impl SwarmPlugin for DepotStorageModPlugin {
+    fn descriptor() -> PluginDescriptor {
+        PluginDescriptor {
+            id: "depot-storage".to_string(),
+            version: "0.1.0".to_string(),
+            api_version: API_VERSION.to_string(),
+            dependencies: Vec::new(),
+            config: [
+                ("depot_capacity", 10_000_u32),
+                ("depot_hits", 5_000),
+                ("repair_range", 1),
+                ("repair_capacity", 5),
+            ]
+            .into_iter()
+            .map(|(key, default)| ConfigFieldDescriptor {
+                key: key.to_string(),
+                value_type: ConfigValueType::U32,
+                default: default.into(),
+                required: false,
+                validator: Some(ConfigValidator::Positive),
+            })
+            .collect(),
+            systems: vec![
+                SystemDescriptor {
+                    system_id: "depot-storage.initialize-forward-depots".to_string(),
+                    version: "0.1.0".to_string(),
+                    phase: TickPhase::Update,
+                    order: 0,
+                    reads: vec!["DepotStorageConfig".to_string()],
+                    writes: vec!["ForwardDepot".to_string(), "Structure".to_string()],
+                    produces_buffers: Vec::new(),
+                    consumes_buffers: Vec::new(),
+                    deterministic_iteration: vec!["Entity".to_string()],
+                },
+                SystemDescriptor {
+                    system_id: "depot-storage.repair".to_string(),
+                    version: "0.1.0".to_string(),
+                    phase: TickPhase::Update,
+                    order: 1,
+                    reads: vec!["Position".to_string()],
+                    writes: vec!["ForwardDepot".to_string(), "Drone".to_string()],
+                    produces_buffers: Vec::new(),
+                    consumes_buffers: Vec::new(),
+                    deterministic_iteration: vec!["Entity".to_string()],
+                },
+            ],
+            actions: Vec::new(),
+            descriptor_schema_version: DESCRIPTOR_SCHEMA_VERSION.to_string(),
+        }
     }
 }
 
@@ -139,7 +196,7 @@ fn distance(a: &Position, b: &Position) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use swarm_engine::components::RoomId;
+    use swarm_engine_api::ids::RoomId;
 
     #[test]
     fn default_depot_matches_configured_capacity() {
@@ -170,5 +227,39 @@ mod tests {
 
         assert_eq!(distance(&a, &b), Some(3));
         assert_eq!(distance(&a, &c), None);
+    }
+
+    #[test]
+    fn descriptor_is_valid_and_identifies_depot_storage() {
+        let descriptor = DepotStorageModPlugin::descriptor();
+        swarm_engine_api::validation::assert_valid_descriptor(&descriptor);
+        assert_eq!(descriptor.id, "depot-storage");
+        assert!(descriptor.dependencies.is_empty());
+        assert_eq!(descriptor.config.len(), 4);
+        assert_eq!(descriptor.systems.len(), 2);
+        assert_eq!(
+            descriptor
+                .config
+                .iter()
+                .map(|field| field.key.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "depot_capacity",
+                "depot_hits",
+                "repair_range",
+                "repair_capacity"
+            ]
+        );
+        assert_eq!(
+            descriptor
+                .systems
+                .iter()
+                .map(|system| system.system_id.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "depot-storage.initialize-forward-depots",
+                "depot-storage.repair"
+            ]
+        );
     }
 }
