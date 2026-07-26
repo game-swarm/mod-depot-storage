@@ -17,7 +17,7 @@
 
 ## 配置
 
-以下配置由 Engine 的 strict mod control plane 按 `mod.toml` 类型定义解码并注入 `DepotStorageConfig`。有效值来自 `mods.lock`；未知字段、错误类型和非法范围会阻止启动。
+以下配置由 Engine 按 `mod.toml` schema 严格验证 `world.toml [mods.depot-storage]` 并写入 replay config identity；`mods.lock` 不保存 gameplay config。native register context 当前保持 defaults-only parity，并把四个 versioned defaults 注入 `DepotStorageConfig`。未知字段、错误类型和非法范围会阻止启动。
 
 mod.toml:
 ```toml
@@ -35,11 +35,11 @@ depot_capacity = { type = "u32", default = 10000 }
 
 ## Standalone Development
 
-This crate depends on `swarm-engine-api` and `swarm-engine-plugin-sdk` at the exact `0.1.0` release from the `v0.1.0` tag in the `game-swarm/engine-api` repository. Cargo fetches these dependencies directly; no sibling API checkout is required.
+This crate pins `swarm-engine-api` and `swarm-engine-plugin-sdk` to canonical source `https://github.com/game-swarm/engine-api.git`, exact version `0.1.0`, and identical full revision `0d97444af0c8f8c563bbe58837a4fdf8753630cf`. Cargo fetches both crates directly; no sibling API checkout is required.
 
 ```sh
 cargo check
 cargo test
 ```
 
-To adopt a later API/SDK release, update both exact versions and the Git tag in `Cargo.toml` together.
+To adopt a later API/SDK release, update both canonical URLs, both exact versions, and both full Git revisions in `Cargo.toml` together, then regenerate `Cargo.lock` and verify both packages resolve to the same commit.
