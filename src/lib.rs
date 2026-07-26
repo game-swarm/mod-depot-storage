@@ -1,10 +1,13 @@
 use bevy::prelude::*;
+use serde::Deserialize;
 use std::collections::BTreeMap;
 use swarm_engine_api::prelude::{
     API_VERSION, ConfigFieldDescriptor, ConfigValidator, ConfigValueType,
     DESCRIPTOR_SCHEMA_VERSION, PlayerId, PluginDescriptor, SystemDescriptor, TickPhase,
 };
-use swarm_engine_plugin_sdk::prelude::{Drone, Position, Structure};
+use swarm_engine_plugin_sdk::prelude::{
+    Drone, NativeModRegisterContext, NativeModRegisterError, Position, Structure,
+};
 use swarm_engine_plugin_sdk::traits::SwarmPlugin;
 
 #[derive(Component, Debug, Clone)]
@@ -113,6 +116,44 @@ impl SwarmPlugin for DepotStorageModPlugin {
             descriptor_schema_version: DESCRIPTOR_SCHEMA_VERSION.to_string(),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+struct ConfiguredDepotStorageModPlugin {
+    config: DepotStorageConfig,
+}
+
+impl Plugin for ConfiguredDepotStorageModPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(self.config.clone());
+        DepotStorageModPlugin.build(app);
+    }
+}
+
+impl SwarmPlugin for ConfiguredDepotStorageModPlugin {
+    fn descriptor() -> PluginDescriptor {
+        DepotStorageModPlugin::descriptor()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct DepotStorageNativeConfig {
+    depot_capacity: u32,
+    depot_hits: u32,
+    repair_range: u32,
+    repair_capacity: u32,
+}
+
+pub fn register(context: &mut NativeModRegisterContext<'_>) -> Result<(), NativeModRegisterError> {
+    let config = context.decode_config::<DepotStorageNativeConfig>()?;
+    context.install(ConfiguredDepotStorageModPlugin {
+        config: DepotStorageConfig {
+            repair_range: config.repair_range,
+            repair_capacity: config.repair_capacity,
+            depot_hits: config.depot_hits,
+            depot_capacity: config.depot_capacity,
+        },
+    })
 }
 
 pub fn initialize_forward_depots(
