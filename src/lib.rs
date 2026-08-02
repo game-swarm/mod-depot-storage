@@ -137,6 +137,7 @@ impl SwarmPlugin for ConfiguredDepotStorageModPlugin {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct DepotStorageNativeConfig {
     depot_capacity: u32,
     depot_hits: u32,
@@ -213,11 +214,11 @@ pub fn depot_repair_system(
             }
             let available = depot.storage.get("Energy").copied().unwrap_or(0);
             if available < depot.repair_cost_energy {
-                break;
+                continue;
             }
             let repaired = depot.repair_age_per_energy.min(drone.age);
             if repaired == 0 {
-                break;
+                continue;
             }
             let repair_cost = depot.repair_cost_energy;
             depot
